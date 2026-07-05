@@ -1,0 +1,19 @@
+{
+  "accounts": [
+    {
+      "id": "ollama-1",
+      "name": "Ollama Server A",
+      "url": "https://ollama.com",
+      "key": "YOUR_OLLAMA_API_KEY",
+      "enabled": true,
+      "models": [],
+      "priority": 1,
+      "retry": {
+        "maxRetries": 3,
+        "baseDelay": 1000,
+        "maxDelay": 10000
+      }
+    }
+  ],
+  "routingStrategy": "round-robin"
+}

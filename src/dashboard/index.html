@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ollama Multi Router - Intelligent AI Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-container">
+    <div class="login-card glass-panel">
+      <div class="login-header">
+        <div class="logo-icon">🦙🪐</div>
+        <h1>Ollama Multi Router</h1>
+        <p>Advanced Enterprise AI Gateway & Load Balancer</p>
+      </div>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" value="admin" placeholder="Enter username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" value="admin123" placeholder="Enter password" autocomplete="current-password">
+      </div>
+      <div id="login-error" class="error-text"></div>
+      <button id="login-btn" class="btn-primary w-full">Login to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Dashboard Screen -->
+  <div id="dashboard" class="dashboard-container hidden">
+    <!-- Floating Glass Navigation Bar -->
+    <nav class="floating-nav">
+      <a href="#section-overview" class="nav-item active">📊 Overview</a>
+      <a href="#section-analytics" class="nav-item">🔬 Telemetry</a>
+      <a href="#section-chart" class="nav-item">📈 Latency Trend</a>
+      <a href="#section-accounts" class="nav-item">🏢 Nodes</a>
+      <a href="#section-models" class="nav-item">🧠 Models</a>
+      <a href="#section-activity" class="nav-item">📡 Traffic</a>
+      <a href="#section-guide" class="nav-item">📖 Guide</a>
+
+    </nav>
+
+    <!-- Header -->
+    <header class="dashboard-header glass-header">
+      <div class="header-left">
+        <div class="header-logo">
+          <span class="logo-icon">🦙🪐</span>
+          <div>
+            <h1>Ollama Multi Router <span class="badge badge-cyan font-mono" style="font-size: 0.75rem; vertical-align: middle;">v3.0 Pro Suite</span></h1>
+            <p class="subtitle">Distributed High-Performance LLM Routing, Caching & Telemetry Engine</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <!-- Theme Accent Picker -->
+        <div class="theme-picker" title="Select UI Accent Theme">
+          <button class="theme-btn theme-cyan active" data-theme="theme-cyan" title="Cyber Cyan"></button>
+          <button class="theme-btn theme-emerald" data-theme="theme-emerald" title="Matrix Emerald"></button>
+          <button class="theme-btn theme-amethyst" data-theme="theme-amethyst" title="Royal Amethyst"></button>
+          <button class="theme-btn theme-amber" data-theme="theme-amber" title="Sunset Amber"></button>
+        </div>
+
+        <div class="auto-refresh-control">
+          <span id="refresh-indicator" class="status-dot healthy pulsing"></span>
+          <label for="auto-refresh-interval" class="text-muted font-mono" style="font-size: 0.8rem;">Auto-Refresh:</label>
+          <select id="auto-refresh-interval" class="input-select font-mono" style="padding: 0.35rem 0.6rem; font-size: 0.85rem;">
+            <option value="0">Off</option>
+            <option value="5000">5s</option>
+            <option value="10000" selected>10s</option>
+            <option value="30000">30s</option>
+          </select>
+        </div>
+        <button id="refresh-btn" class="btn-secondary">🔄 Refresh Status</button>
+        <button id="logout-btn" class="btn-danger">Logout</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-content">
+      <!-- Section: Overview Analytics -->
+      <section id="section-overview" class="stats-grid">
+        <div class="stat-card glass-panel stat-primary">
+          <div class="stat-icon">🖧</div>
+          <div class="stat-content">
+            <span class="stat-label">Total Accounts</span>
+            <span id="total-accounts" class="stat-value font-mono">0</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel stat-success">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-content">
+            <span class="stat-label">Active & Enabled</span>
+            <span id="enabled-accounts" class="stat-value font-mono">0</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel stat-emerald">
+          <div class="stat-icon">💚</div>
+          <div class="stat-content">
+            <span class="stat-label">Healthy Nodes</span>
+            <span id="healthy-accounts" class="stat-value font-mono">0</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel stat-indigo">
+          <div class="stat-icon">🚀</div>
+          <div class="stat-content">
+            <span class="stat-label">Total Requests</span>
+            <span id="total-requests" class="stat-value font-mono">0</span>
+          </div>
+        </div>
+        <!-- Extended V2/V3 Analytics -->
+        <div class="stat-card glass-panel stat-cyan">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-content">
+            <span class="stat-label">Success Rate</span>
+            <span id="success-rate" class="stat-value font-mono text-cyan">100%</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel stat-purple">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-content">
+            <span class="stat-label">Avg Response Latency</span>
+            <span id="avg-latency" class="stat-value font-mono text-main">0 ms</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel stat-amber">
+          <div class="stat-icon">🪙</div>
+          <div class="stat-content">
+            <span class="stat-label">Total Tokens Processed</span>
+            <span id="total-tokens" class="stat-value font-mono">0</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel stat-teal">
+          <div class="stat-icon">💾</div>
+          <div class="stat-content">
+            <span class="stat-label">Cache Hit Rate</span>
+            <span id="cache-hit-rate" class="stat-value font-mono text-emerald">0%</span>
+          </div>
+        </div>
+        <!-- V3 Executive Stats -->
+        <div class="stat-card glass-panel stat-emerald">
+          <div class="stat-icon">💰</div>
+          <div class="stat-content">
+            <span class="stat-label">Estimated Cloud Savings</span>
+            <span id="cloud-savings" class="stat-value font-mono text-emerald" title="Estimated savings compared to commercial cloud API pricing ($5.00/1M tokens)">$0.00</span>
+          </div>
+        </div>
+        <div class="stat-card glass-panel stat-indigo">
+          <div class="stat-icon">🏎️</div>
+          <div class="stat-content">
+            <span class="stat-label">Throughput Velocity</span>
+            <span id="avg-tps" class="stat-value font-mono text-main" title="Average token generation velocity across recent completions">0 t/s</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: V4 Complex Analytics -->
+      <section id="section-analytics" class="glass-panel section-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">🔬 Advanced Telemetry & Distribution</h2>
+            <p class="panel-subtitle">Deep dive into model utilization, hourly traffic density, and node workload balance</p>
+          </div>
+        </div>
+        <div class="analytics-grid">
+          <!-- Hourly Traffic Heatmap -->
+          <div class="analytics-card glass-card">
+            <h3 class="analytics-title">🕒 24H Traffic Heatmap</h3>
+            <div id="hourly-heatmap" class="heatmap-container">
+              <div class="text-center text-muted font-mono py-4">Waiting for traffic data...</div>
+            </div>
+            <div class="heatmap-legend font-mono text-sm">
+              <span>Low</span>
+              <div class="color-scale"></div>
+              <span>High</span>
+            </div>
+          </div>
+          <!-- Model Usage Distribution -->
+          <div class="analytics-card glass-card">
+            <h3 class="analytics-title">🧠 Model Usage Distribution</h3>
+            <div id="model-distribution" class="distribution-container">
+              <div class="text-center text-muted font-mono py-4">Waiting for model data...</div>
+            </div>
+          </div>
+          <!-- Account Workload Balance -->
+          <div class="analytics-card glass-card analytics-full-width">
+            <h3 class="analytics-title">⚖️ Node Workload Balance</h3>
+            <div id="workload-balance" class="workload-bar-container">
+              <div class="text-center text-muted font-mono py-4">Waiting for node data...</div>
+            </div>
+            <div id="workload-legend" class="workload-legend font-mono text-sm"></div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- Section: Visual Latency Trend Graph -->
+      <section id="section-chart" class="glass-panel section-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">📈 Real-Time Latency & Traffic Trend</h2>
+            <p class="panel-subtitle">Visual performance history of the last 30 routed AI requests across all nodes</p>
+          </div>
+          <div class="chart-legend font-mono text-sm" style="display: flex; gap: 1rem; align-items: center;">
+            <span><span class="status-dot healthy" style="margin-right: 4px; display: inline-block;"></span>200 OK</span>
+            <span><span class="status-dot unhealthy" style="margin-right: 4px; display: inline-block;"></span>500 Error</span>
+            <span><span class="text-cyan font-semibold">⚡ Cache Hit</span></span>
+          </div>
+        </div>
+        <div id="latency-chart-container" class="chart-container">
+          <div class="text-center py-8 text-muted">Waiting for traffic data to generate visual chart...</div>
+        </div>
+      </section>
+
+      <!-- Section: Account Controls & Routing -->
+      <section id="section-accounts" class="glass-panel section-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">🏢 Connected Ollama Accounts & Nodes</h2>
+            <p class="panel-subtitle">Manage backend LLM instances, API keys, priorities, and health check telemetry</p>
+          </div>
+          <div class="panel-actions">
+            <div class="strategy-selector">
+              <label for="routing-strategy">Routing Strategy:</label>
+              <select id="routing-strategy" class="input-select font-mono">
+                <option value="round-robin">🔄 Round Robin</option>
+                <option value="priority">⭐ Priority Order</option>
+                <option value="least-loaded">⚖️ Least Loaded</option>
+              </select>
+            </div>
+            <button id="health-check-btn" class="btn-secondary">🏥 Run Health Check</button>
+            <button id="add-account-btn" class="btn-primary">➕ Add Account</button>
+          </div>
+        </div>
+
+        <div id="accounts-list" class="accounts-grid">
+          <p class="empty-text">Loading configured Ollama accounts...</p>
+        </div>
+      </section>
+
+      <!-- Section: Active Models -->
+      <section id="section-models" class="glass-panel section-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">🧠 Active Models Breakdown</h2>
+            <p class="panel-subtitle">Aggregated AI models currently available and utilized across your Ollama cluster</p>
+          </div>
+        </div>
+        <div id="models-list" class="models-grid">
+          <p class="empty-text">Loading model telemetry...</p>
+        </div>
+      </section>
+
+      <!-- Section: Live Activity Feed -->
+      <section id="section-activity" class="glass-panel section-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">📡 Live Request Activity Feed</h2>
+            <p class="panel-subtitle">Real-time telemetry of recent LLM routing, token generation, and response caching</p>
+          </div>
+        </div>
+
+        <!-- Search & Filter Bar -->
+        <div class="filter-bar font-mono">
+          <div class="filter-search">
+            <span>🔍</span>
+            <input type="text" id="activity-search" placeholder="Search by model name, node ID, or endpoint path...">
+          </div>
+          <div class="filter-pills">
+            <button class="filter-pill active" data-filter="all">All Traffic</button>
+            <button class="filter-pill" data-filter="success">✅ 200 OK</button>
+            <button class="filter-pill" data-filter="error">❌ 500 Error</button>
+            <button class="filter-pill" data-filter="cached">⚡ Cache Hit</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="activity-table font-mono">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Status</th>
+                <th>Model</th>
+                <th>Method / Path</th>
+                <th>Target Node</th>
+                <th>Duration</th>
+                <th>Tokens (In/Out)</th>
+                <th>Cache Status</th>
+              </tr>
+            </thead>
+            <tbody id="activity-feed">
+              <tr>
+                <td colspan="8" class="text-center py-4 text-muted">Loading activity logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: API & Integration Guide -->
+      <section id="section-guide" class="glass-panel section-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">📖 API & Client Integration Guide</h2>
+            <p class="panel-subtitle">Seamless drop-in OpenAI compatible routing for Cursor, Hermes, cURL, and custom SDKs</p>
+          </div>
+        </div>
+
+        <!-- Section: Client Access & API Keys -->
+        <section id="section-clients" style="margin-bottom: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <h3 style="margin: 0; color: var(--text-main); font-size: 1.25rem;">🔑 Client Access & API Keys</h3>
+              <p class="text-muted" style="margin: 0.25rem 0 0; font-size: 0.85rem;">Manage multi-tenant API keys. Use these keys in external applications to authenticate with the router.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="text" id="new-client-name" placeholder="Client Name (e.g. Web App)" class="input-text font-mono" style="padding: 0.4rem 0.75rem; width: 200px;">
+              <button id="add-client-btn" class="btn-primary font-mono" style="padding: 0.4rem 0.75rem;">➕ Add Client</button>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Client Name</th>
+                  <th>API Key (Bearer Token)</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clients-tbody">
+                <tr><td colspan="4" class="text-center text-muted font-mono py-4">Loading clients...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Code Snippet Tabs -->
+        <div class="guide-tabs">
+          <button class="guide-tab-btn active" data-tab="tab-curl">⚡ cURL CLI</button>
+          <button class="guide-tab-btn" data-tab="tab-python">🐍 Python SDK</button>
+          <button class="guide-tab-btn" data-tab="tab-node">📦 Node.js / TS</button>
+          <button class="guide-tab-btn" data-tab="tab-cursor">🤖 Cursor IDE</button>
+          <button class="guide-tab-btn" data-tab="tab-hermes">💬 Hermes Agent</button>
+        </div>
+
+        <div id="tab-curl" class="guide-tab-content active">
+          <p class="text-muted text-sm mb-2">Run this command in your terminal to test OpenAI-compatible chat completions:</p>
+          <div class="code-block-wrapper">
+            <pre class="font-mono"><code id="code-curl-text">curl -X POST http://localhost:20128/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <span id="guide-key-curl" class="text-cyan">default-insecure-key</span>" \
+  -d '{
+    "model": "<span id="guide-model-curl" class="text-indigo">llama3.1:8b</span>",
+    "messages": [{"role": "user", "content": "Hello! Why is Ollama Multi Router awesome?"}],
+    "stream": true
+  }'</code></pre>
+            <button class="btn-copy-code" data-target="code-curl-text">📋 Copy Command</button>
+          </div>
+        </div>
+
+        <div id="tab-python" class="guide-tab-content hidden">
+          <p class="text-muted text-sm mb-2">Use the official Python `openai` SDK to connect directly to the router:</p>
+          <div class="code-block-wrapper">
+            <pre class="font-mono"><code id="code-python-text">from openai import OpenAI
+
+client = OpenAI(
+    base_url="<span id="guide-base-python" class="text-cyan">http://localhost:20128/v1</span>",
+    api_key="<span id="guide-key-python" class="text-indigo">default-insecure-key</span>"
+)
+
+response = client.chat.completions.create(
+    model="<span id="guide-model-python" class="text-emerald">llama3.1:8b</span>",
+    messages=[{"role": "user", "content": "Explain load balancing in 2 sentences."}]
+)
+
+print(response.choices[0].message.content)</code></pre>
+            <button class="btn-copy-code" data-target="code-python-text">📋 Copy Code</button>
+          </div>
+        </div>
+
+        <div id="tab-node" class="guide-tab-content hidden">
+          <p class="text-muted text-sm mb-2">Use the official Node.js / TypeScript `openai` SDK:</p>
+          <div class="code-block-wrapper">
+            <pre class="font-mono"><code id="code-node-text">import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  baseURL: '<span id="guide-base-node" class="text-cyan">http://localhost:20128/v1</span>',
+  apiKey: '<span id="guide-key-node" class="text-indigo">default-insecure-key</span>',
+});
+
+async function main() {
+  const completion = await openai.chat.completions.create({
+    messages: [{ role: 'user', content: 'What is high availability?' }],
+    model: '<span id="guide-model-node" class="text-emerald">llama3.1:8b</span>',
+  });
+  console.log(completion.choices[0].message.content);
+}
+main();</code></pre>
+            <button class="btn-copy-code" data-target="code-node-text">📋 Copy Code</button>
+          </div>
+        </div>
+
+        <div id="tab-cursor" class="guide-tab-content hidden">
+          <div class="guide-step">
+            <span class="step-num font-mono">1</span>
+            <div>
+              <h4>Open Cursor IDE Settings</h4>
+              <p>Navigate to <code>Settings</code> ➔ <code>Models</code> ➔ <code>OpenAI API Key</code>.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <span class="step-num font-mono">2</span>
+            <div>
+              <h4>Configure Custom OpenAI Base URL & Key</h4>
+              <p>Set Base URL: <code id="guide-base-cursor" class="font-mono text-cyan">http://localhost:20128/v1</code></p>
+              <p>Set API Key: <code id="guide-key-cursor" class="font-mono text-indigo">default-insecure-key</code></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-hermes" class="guide-tab-content hidden">
+          <div class="guide-step">
+            <span class="step-num font-mono">1</span>
+            <div>
+              <h4>Set Environment Variables</h4>
+              <p>When running Hermes Agent, export the following environment variables in your terminal:</p>
+              <pre class="code-block font-mono mt-2">export OPENAI_API_BASE="<span id="guide-base-hermes" class="text-cyan">http://localhost:20128/v1</span>"
+export OPENAI_API_KEY="<span id="guide-key-hermes" class="text-indigo">default-insecure-key</span>"</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer font-mono">
+      <p>Ollama Multi Router v3.0 Pro Suite • Built with high-performance event-driven routing • <span class="text-cyan">⚡ Intelligent Load Balancing & Cache</span></p>
+    </footer>
+  </div>
+
+  <!-- Account Modal (Add / Edit) -->
+  <div id="account-modal" class="modal-overlay hidden">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h2 id="modal-title">Add New Ollama Account</h2>
+        <button id="modal-close" class="modal-close font-mono">&times;</button>
+      </div>
+      <form id="account-form" class="modal-form">
+        <input type="hidden" id="form-account-id">
+        
+        <div class="form-group">
+          <label for="form-name">Account Name / Label *</label>
+          <input type="text" id="form-name" placeholder="e.g. Local RTX 4090, Cloud GPU Node 1" required>
+        </div>
+
+        <div class="form-group">
+          <label for="form-url">Ollama Base URL *</label>
+          <input type="url" id="form-url" placeholder="e.g. http://localhost:11434" required>
+          <span class="form-hint">Must be accessible from this router server.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="form-key">API Key (Optional)</label>
+          <input type="password" id="form-key" placeholder="Leave blank if no proxy auth is required">
+          <span class="form-hint">Used if your Ollama instance is protected by a reverse proxy or bearer token.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="form-priority">Priority Order (1 = Highest)</label>
+          <input type="number" id="form-priority" min="1" max="100" value="1" required>
+          <span class="form-hint">Lower numbers are prioritized when using 'Priority Order' strategy.</span>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="modal-cancel" class="btn-secondary">Cancel</button>
+          <button type="submit" id="modal-save" class="btn-primary">Save Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

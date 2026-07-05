@@ -1,0 +1,32 @@
+{
+  "name": "ollama-multi-router",
+  "version": "1.0.0",
+  "description": "Local AI gateway for routing multiple Ollama Cloud accounts into one OpenAI-compatible endpoint",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js",
+    "service:install": "bash scripts/install-service.sh",
+    "service:uninstall": "bash scripts/uninstall-service.sh",
+    "service:status": "launchctl print gui/$(id -u)/com.dcp.ollama-multi-router 2>/dev/null | grep -E 'state =|pid =|program =' || echo 'service not loaded'",
+    "service:logs": "tail -n 60 -f logs/service.out.log"
+  },
+  "keywords": [
+    "ollama",
+    "router",
+    "gateway",
+    "openai",
+    "cursor",
+    "hermes"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.18.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "winston": "^3.19.0"
+  }
+}
