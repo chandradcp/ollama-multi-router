@@ -78,8 +78,13 @@ function dashboardAuthMiddleware(req, res, next) {
   next();
 }
 
-// Static dashboard (protected)
-app.use('/dashboard', dashboardAuthMiddleware, express.static(path.join(__dirname, 'dashboard')));
+// Static dashboard shell — served without auth so the in-page login form can
+// load. It contains no secrets; every data endpoint (/api/*) stays behind
+// dashboardAuthMiddleware, and the login form authenticates against those.
+// (Previously this was also behind Basic auth, causing a chicken-and-egg 401:
+// the page holding the login form couldn't load until you were already
+// authenticated, and browsers got prompted for login twice.)
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -365,7 +370,7 @@ app.post('/v1/chat/completions', authMiddleware, async (req, res) => {
       parseInt(process.env.MAX_RETRIES || '4', 10)
     );
 
-    logRequest('POST', '/v1/chat/completions', account.id, stream ? 200 : 200, Date.now() - start);
+    logRequest('POST', '/v1/chat/completions', account.id, stream ? 200 : 200, Date.now() - start, { model: req.body.model });
 
     if (stream) {
       res.setHeader('Content-Type', 'text/event-stream');
@@ -444,7 +449,7 @@ app.post('/v1/chat/completions', authMiddleware, async (req, res) => {
       res.json(openAIResp);
     }
   } catch (err) {
-    logRequest('POST', '/v1/chat/completions', 'all-failed', 500, Date.now() - start);
+    logRequest('POST', '/v1/chat/completions', 'all-failed', 500, Date.now() - start, { model: req.body.model, reason: err.message.slice(0, 300) });
 
     stats.recordRequest({
       method: 'POST',

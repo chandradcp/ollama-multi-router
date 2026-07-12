@@ -17,3 +17,6 @@ config/clients.json
 
 # Runtime per-account usage counters
 config/usage.json
+
+# macOS
+.DS_Store

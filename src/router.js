@@ -112,8 +112,19 @@ async function executeWithFallback(requestFn, maxRetries = null, strategy = null
         recordAccountRateLimit(account.id, Number.isFinite(retryAfter) ? retryAfter : 60);
       }
 
-      attempts.push({ account: account.id, error: err.message });
-      log('warn', `Account ${account.id} failed after retries, trying next if available`, err.message);
+      // Capture the upstream status + Ollama's own error text (e.g. "model
+      // 'xxx' not found") so a 500 tells us WHY, not just "status code 404".
+      let detail = '';
+      if (err.response && err.response.data) {
+        const d = err.response.data;
+        if (typeof d === 'string') detail = d;
+        else if (d.error) detail = typeof d.error === 'string' ? d.error : JSON.stringify(d.error);
+      }
+      const errText = err.response
+        ? `HTTP ${err.response.status}${detail ? ': ' + detail.slice(0, 160) : ''}`
+        : err.message;
+      attempts.push({ account: account.id, error: errText });
+      log('warn', `Account ${account.id} failed after retries, trying next if available`, errText);
 
       if (i < limit - 1) {
         await sleep(100);
