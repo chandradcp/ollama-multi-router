@@ -79,10 +79,21 @@ function normalizeBaseUrl(url) {
   return url.trim().replace(/\/+$/, '').replace(/\/v1$/i, '');
 }
 
+// Normalize a base URL for a genuine OpenAI-compatible provider (Kimi Code,
+// Moonshot, etc). Unlike Ollama, these providers' base URL conventionally
+// *includes* the `/v1`-style path segment and endpoints hang directly off
+// it (e.g. `.../coding/v1/chat/completions`) — so only trim trailing
+// slashes, never strip a `/v1` suffix.
+function stripTrailingSlash(url) {
+  if (!url) return url;
+  return url.trim().replace(/\/+$/, '');
+}
+
 module.exports = {
   log,
   logRequest,
   sleep,
   generateId,
-  normalizeBaseUrl
+  normalizeBaseUrl,
+  stripTrailingSlash
 };

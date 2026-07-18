@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { normalizeBaseUrl, generateId, sleep } = require('../src/utils');
+const { normalizeBaseUrl, stripTrailingSlash, generateId, sleep } = require('../src/utils');
 
 test('normalizeBaseUrl strips a trailing /v1 (OpenAI-compat suffix)', () => {
   assert.strictEqual(normalizeBaseUrl('https://api.ollama.com/v1'), 'https://api.ollama.com');
@@ -32,6 +32,18 @@ test('normalizeBaseUrl handles empty/null safely', () => {
   assert.strictEqual(normalizeBaseUrl(''), '');
   assert.strictEqual(normalizeBaseUrl(null), null);
   assert.strictEqual(normalizeBaseUrl(undefined), undefined);
+});
+
+test('stripTrailingSlash trims trailing slashes but preserves a /v1 suffix', () => {
+  assert.strictEqual(stripTrailingSlash('https://api.kimi.com/coding/v1/'), 'https://api.kimi.com/coding/v1');
+  assert.strictEqual(stripTrailingSlash('https://api.kimi.com/coding/v1'), 'https://api.kimi.com/coding/v1');
+  assert.strictEqual(stripTrailingSlash('https://host///'), 'https://host');
+});
+
+test('stripTrailingSlash handles empty/null safely', () => {
+  assert.strictEqual(stripTrailingSlash(''), '');
+  assert.strictEqual(stripTrailingSlash(null), null);
+  assert.strictEqual(stripTrailingSlash(undefined), undefined);
 });
 
 test('generateId returns a non-empty string', () => {

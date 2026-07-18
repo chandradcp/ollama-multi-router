@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const { log, normalizeBaseUrl } = require('./utils');
+const { log, normalizeBaseUrl, stripTrailingSlash } = require('./utils');
 
 const CONFIG_PATH = path.join(__dirname, '..', 'config', 'accounts.json');
 const USAGE_PATH = process.env.USAGE_STORE_PATH || path.join(__dirname, '..', 'config', 'usage.json');
@@ -212,7 +212,13 @@ function extractRateLimit(headers) {
 
 async function healthCheckAccount(account) {
   try {
-    const url = `${normalizeBaseUrl(account.url)}/api/tags`;
+    // OpenAI-compatible accounts (Kimi Code, Moonshot, etc) expose their
+    // catalog at /models (OpenAI shape: {data:[{id}]}) rather than Ollama's
+    // native /api/tags ({models:[{name}]}).
+    const url = account.type === 'openai'
+      ? `${stripTrailingSlash(account.url)}/models`
+      : `${normalizeBaseUrl(account.url)}/api/tags`;
+
     const response = await axios.get(url, {
       headers: {
         'Authorization': `Bearer ${account.key}`,
@@ -221,8 +227,9 @@ async function healthCheckAccount(account) {
       timeout: 10000
     });
 
-    const models = response.data.models || [];
-    account.models = models.map(m => m.name || m.model);
+    account.models = account.type === 'openai'
+      ? (response.data.data || []).map(m => m.id)
+      : (response.data.models || []).map(m => m.name || m.model);
 
     const rateLimit = extractRateLimit(response.headers);
 
@@ -286,6 +293,7 @@ function saveAccount(data) {
     name: data.name,
     url: data.url,
     key: data.key,
+    type: data.type === 'openai' ? 'openai' : 'ollama',
     enabled: data.enabled !== undefined ? data.enabled : true,
     models: existingIndex >= 0 ? accounts[existingIndex].models : [],
     priority: data.priority || 1,

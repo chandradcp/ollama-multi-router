@@ -17,7 +17,7 @@ const {
   loadUsage,
   flushUsage
 } = require('./providers');
-const { executeWithFallback, chatCompletion, listModels } = require('./router');
+const { executeWithFallback, sendChatRequest, chatCompletion, listModels } = require('./router');
 const { sendAllAccountsFailedNotification } = require('./notifications');
 const cache = require('./cache');
 const stats = require('./stats');
@@ -362,11 +362,10 @@ app.post('/v1/chat/completions', authMiddleware, async (req, res) => {
   }
 
   try {
-    const ollamaBody = openAIRequestToOllama(req.body, stream);
     const openAIModelName = req.body.model;
 
     const { result: streamData, account } = await executeWithFallback(
-      acc => chatCompletion(acc, ollamaBody, stream),
+      acc => sendChatRequest(acc, req.body, stream),
       parseInt(process.env.MAX_RETRIES || '4', 10)
     );
 
@@ -377,60 +376,112 @@ app.post('/v1/chat/completions', authMiddleware, async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      let buffer = '';
-      let totalContent = '';
-      let sawToolCalls = false;
+      if (account.type === 'openai') {
+        // Already OpenAI-format SSE from the upstream — forward bytes as-is
+        // (never re-encode, so we don't risk corrupting a shape we don't
+        // fully control). Parse alongside, best-effort, only to estimate
+        // tokens for the dashboard stats — never alters what the client gets.
+        let buffer = '';
+        let totalContent = '';
 
-      streamData.on('data', (chunk) => {
-        buffer += chunk.toString();
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const json = JSON.parse(line);
-            const openAIChunk = ollamaStreamChunkToOpenAI(json, openAIModelName);
-            const choice = openAIChunk.choices[0];
-            totalContent += choice?.delta?.content || '';
-            // Ollama may stream tool_calls in a non-final chunk, then a plain
-            // done chunk. Remember it so the terminating chunk reports the
-            // correct OpenAI finish_reason ('tool_calls' instead of 'stop').
-            if (choice?.delta?.tool_calls) sawToolCalls = true;
-            if (json.done && sawToolCalls) choice.finish_reason = 'tool_calls';
-            res.write(`data: ${JSON.stringify(openAIChunk)}\n\n`);
-          } catch (err) {
-            // ignore invalid json
-          }
-        }
-      });
-
-      streamData.on('end', () => {
-        res.write('data: [DONE]\n\n');
-        res.end();
-
-        // Record stats for streaming
-        stats.recordRequest({
-          method: 'POST',
-          path: '/v1/chat/completions',
-          accountId: account.id,
-          model: openAIModelName,
-          duration: Date.now() - start,
-          status: 200,
-          success: true,
-          tokens: {
-            input: Math.ceil(JSON.stringify(req.body.messages || []).length / 4),
-            output: Math.ceil(totalContent.length / 4)
+        streamData.on('data', (chunk) => {
+          res.write(chunk);
+          buffer += chunk.toString();
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            const payload = line.replace(/^data:\s*/, '').trim();
+            if (!payload || payload === '[DONE]') continue;
+            try {
+              const json = JSON.parse(payload);
+              totalContent += json.choices?.[0]?.delta?.content || '';
+            } catch (err) {
+              // ignore invalid json
+            }
           }
         });
-      });
 
-      streamData.on('error', (err) => {
-        log('error', 'Stream error', err.message);
-        res.end();
-      });
+        streamData.on('end', () => {
+          res.end();
+          stats.recordRequest({
+            method: 'POST',
+            path: '/v1/chat/completions',
+            accountId: account.id,
+            model: openAIModelName,
+            duration: Date.now() - start,
+            status: 200,
+            success: true,
+            tokens: {
+              input: Math.ceil(JSON.stringify(req.body.messages || []).length / 4),
+              output: Math.ceil(totalContent.length / 4)
+            }
+          });
+        });
+
+        streamData.on('error', (err) => {
+          log('error', 'Stream error', err.message);
+          res.end();
+        });
+      } else {
+        let buffer = '';
+        let totalContent = '';
+        let sawToolCalls = false;
+
+        streamData.on('data', (chunk) => {
+          buffer += chunk.toString();
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const json = JSON.parse(line);
+              const openAIChunk = ollamaStreamChunkToOpenAI(json, openAIModelName);
+              const choice = openAIChunk.choices[0];
+              totalContent += choice?.delta?.content || '';
+              // Ollama may stream tool_calls in a non-final chunk, then a plain
+              // done chunk. Remember it so the terminating chunk reports the
+              // correct OpenAI finish_reason ('tool_calls' instead of 'stop').
+              if (choice?.delta?.tool_calls) sawToolCalls = true;
+              if (json.done && sawToolCalls) choice.finish_reason = 'tool_calls';
+              res.write(`data: ${JSON.stringify(openAIChunk)}\n\n`);
+            } catch (err) {
+              // ignore invalid json
+            }
+          }
+        });
+
+        streamData.on('end', () => {
+          res.write('data: [DONE]\n\n');
+          res.end();
+
+          // Record stats for streaming
+          stats.recordRequest({
+            method: 'POST',
+            path: '/v1/chat/completions',
+            accountId: account.id,
+            model: openAIModelName,
+            duration: Date.now() - start,
+            status: 200,
+            success: true,
+            tokens: {
+              input: Math.ceil(JSON.stringify(req.body.messages || []).length / 4),
+              output: Math.ceil(totalContent.length / 4)
+            }
+          });
+        });
+
+        streamData.on('error', (err) => {
+          log('error', 'Stream error', err.message);
+          res.end();
+        });
+      }
     } else {
-      const openAIResp = ollamaResponseToOpenAI(streamData, openAIModelName);
+      // Ollama accounts need native-response -> OpenAI translation; an
+      // OpenAI-compatible account's response is already in the right shape.
+      const openAIResp = account.type === 'openai'
+        ? streamData
+        : ollamaResponseToOpenAI(streamData, openAIModelName);
 
       // Cache the response
       cache.set('POST', '/v1/chat/completions', req.body, openAIResp);

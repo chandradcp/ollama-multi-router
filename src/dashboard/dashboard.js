@@ -740,6 +740,7 @@ function renderAccounts(accounts) {
         <h3>
           ${escapeHtml(acc.name)}
           <span class="badge ${acc.enabled ? 'badge-green' : 'badge-gray'}">${acc.enabled ? 'Active' : 'Disabled'}</span>
+          ${acc.type === 'openai' ? '<span class="badge badge-indigo">OpenAI-compatible</span>' : ''}
         </h3>
         <p class="font-mono text-muted">ID: ${safeId}</p>
         <p class="font-mono text-cyan">URL: ${escapeHtml(acc.url)}</p>
@@ -1027,8 +1028,9 @@ function openEditModal(id) {
   if (!acc) return;
 
   currentEditId = id;
-  document.getElementById('modal-title').textContent = 'Edit Ollama Account';
+  document.getElementById('modal-title').textContent = 'Edit Account';
   document.getElementById('form-account-id').value = acc.id;
+  document.getElementById('form-type').value = acc.type || 'ollama';
   document.getElementById('form-name').value = acc.name;
   document.getElementById('form-url').value = acc.url;
   document.getElementById('form-key').value = acc.key;
@@ -1039,8 +1041,9 @@ function openEditModal(id) {
 
 function openAddModal() {
   currentEditId = null;
-  document.getElementById('modal-title').textContent = 'Add New Ollama Account';
+  document.getElementById('modal-title').textContent = 'Add New Account';
   document.getElementById('form-account-id').value = '';
+  document.getElementById('form-type').value = 'ollama';
   document.getElementById('form-name').value = '';
   document.getElementById('form-url').value = '';
   document.getElementById('form-key').value = '';
@@ -1233,6 +1236,7 @@ async function init() {
 
     const data = {
       id: currentEditId || `ollama-${Date.now()}`,
+      type: document.getElementById('form-type').value,
       name: document.getElementById('form-name').value.trim(),
       url: document.getElementById('form-url').value.trim(),
       key: document.getElementById('form-key').value.trim(),

@@ -1,6 +1,7 @@
 const axios = require('axios');
-const { log, sleep, normalizeBaseUrl } = require('./utils');
+const { log, sleep, normalizeBaseUrl, stripTrailingSlash } = require('./utils');
 const { executeWithRetry } = require('./retry');
+const { openAIRequestToOllama } = require('./openai-compat');
 const {
   getEnabledAccounts,
   getGlobalRoutingStrategy,
@@ -154,7 +155,46 @@ async function chatCompletion(account, ollamaBody, stream = false) {
   return response.data;
 }
 
+// Send an OpenAI-shape chat completion request to `account`, honoring its
+// provider type:
+//  - 'ollama' (default): translate to Ollama's native /api/chat format.
+//  - 'openai': the account IS already an OpenAI-compatible endpoint (e.g. a
+//    Kimi Code / Moonshot-style subscription) — forward the body as-is to
+//    its own /chat/completions, no translation needed in either direction.
+// This is the entry point callers (server.js) should use instead of
+// chatCompletion() directly, since it works uniformly across account types.
+async function sendChatRequest(account, openAIBody, stream = false) {
+  if (account.type === 'openai') {
+    const url = `${stripTrailingSlash(account.url)}/chat/completions`;
+    const response = await axios.post(url, { ...openAIBody, stream }, {
+      headers: {
+        'Authorization': `Bearer ${account.key}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: parseInt(process.env.REQUEST_TIMEOUT || '60000', 10),
+      responseType: stream ? 'stream' : 'json'
+    });
+    return response.data;
+  }
+
+  const ollamaBody = openAIRequestToOllama(openAIBody, stream);
+  return chatCompletion(account, ollamaBody, stream);
+}
+
 async function listModels(account) {
+  if (account.type === 'openai') {
+    const url = `${stripTrailingSlash(account.url)}/models`;
+    const response = await axios.get(url, {
+      headers: {
+        'Authorization': `Bearer ${account.key}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
+    });
+    // Normalize to the same {name} shape callers expect from Ollama's /api/tags.
+    return (response.data.data || []).map(m => ({ name: m.id }));
+  }
+
   const url = `${normalizeBaseUrl(account.url)}/api/tags`;
   const response = await axios.get(url, {
     headers: {
@@ -173,5 +213,6 @@ module.exports = {
   getAllEnabledAccounts,
   executeWithFallback,
   chatCompletion,
+  sendChatRequest,
   listModels
 };

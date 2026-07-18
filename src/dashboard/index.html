@@ -451,27 +451,36 @@ export OPENAI_API_KEY="<span id="guide-key-hermes" class="text-indigo">default-i
   <div id="account-modal" class="modal-overlay hidden">
     <div class="modal-card glass-panel">
       <div class="modal-header">
-        <h2 id="modal-title">Add New Ollama Account</h2>
+        <h2 id="modal-title">Add New Account</h2>
         <button id="modal-close" class="modal-close font-mono">&times;</button>
       </div>
       <form id="account-form" class="modal-form">
         <input type="hidden" id="form-account-id">
-        
+
+        <div class="form-group">
+          <label for="form-type">Provider Type</label>
+          <select id="form-type">
+            <option value="ollama">Ollama Cloud / Self-hosted</option>
+            <option value="openai">OpenAI-compatible (Kimi Code, Moonshot, etc)</option>
+          </select>
+          <span class="form-hint">Ollama accounts use the native /api/chat protocol. OpenAI-compatible accounts are forwarded to their own /chat/completions endpoint unmodified.</span>
+        </div>
+
         <div class="form-group">
           <label for="form-name">Account Name / Label *</label>
           <input type="text" id="form-name" placeholder="e.g. Local RTX 4090, Cloud GPU Node 1" required>
         </div>
 
         <div class="form-group">
-          <label for="form-url">Ollama Base URL *</label>
+          <label for="form-url">Base URL *</label>
           <input type="url" id="form-url" placeholder="e.g. http://localhost:11434" required>
-          <span class="form-hint">Must be accessible from this router server.</span>
+          <span class="form-hint">Ollama: e.g. http://localhost:11434. OpenAI-compatible: the full API base including /v1, e.g. https://api.kimi.com/coding/v1.</span>
         </div>
 
         <div class="form-group">
           <label for="form-key">API Key (Optional)</label>
           <input type="password" id="form-key" placeholder="Leave blank if no proxy auth is required">
-          <span class="form-hint">Used if your Ollama instance is protected by a reverse proxy or bearer token.</span>
+          <span class="form-hint">Used if your Ollama instance is protected by a reverse proxy or bearer token. Required for OpenAI-compatible providers.</span>
         </div>
 
         <div class="form-group">
