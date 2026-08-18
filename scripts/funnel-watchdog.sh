@@ -6,8 +6,24 @@
 # down, re-registers the funnel — escalating to a full down/up reconnect if a
 # cheap re-arm isn't enough. Run every 60s by launchd.
 
-TS="${TAILSCALE_BIN:-/opt/homebrew/bin/tailscale}"
-PROJECT_DIR="${PROJECT_DIR:-/Users/Jarvis/ollama-multi-router}"
+# Resolve the tailscale binary: an explicit override wins, then PATH, then the
+# usual install locations (Homebrew on Intel/ARM, the standalone installer's
+# ~/.local/bin, and the GUI app bundle).
+resolve_ts() {
+  [ -n "$TAILSCALE_BIN" ] && { echo "$TAILSCALE_BIN"; return; }
+  command -v tailscale 2>/dev/null && return
+  for c in /opt/homebrew/bin/tailscale /usr/local/bin/tailscale "$HOME/.local/bin/tailscale" \
+           /Applications/Tailscale.app/Contents/MacOS/Tailscale; do
+    [ -x "$c" ] && { echo "$c"; return; }
+  done
+  echo tailscale
+}
+TS="$(resolve_ts)"
+
+# Derive the project directory from this script's own location so the watchdog
+# works wherever the repo is checked out, instead of a hardcoded home path.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
 LOG="$PROJECT_DIR/logs/funnel-watchdog.log"
 mkdir -p "$PROJECT_DIR/logs"
 
