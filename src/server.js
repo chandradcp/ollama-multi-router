@@ -18,6 +18,12 @@ const {
   flushUsage
 } = require('./providers');
 const { executeWithFallback, sendChatRequest, chatCompletion, listModels } = require('./router');
+const { listUnsupported } = require('./capabilities');
+const {
+  probeAll,
+  getLastRun: getLastProbeRun,
+  isRunning: isProbeRunning
+} = require('./model-probe');
 const { sendAllAccountsFailedNotification } = require('./notifications');
 const cache = require('./cache');
 const stats = require('./stats');
@@ -167,6 +173,46 @@ app.post('/api/accounts/:id/toggle', dashboardAuthMiddleware, (req, res) => {
 app.post('/api/health-check', dashboardAuthMiddleware, async (req, res) => {
   await runHealthChecks();
   res.json({ success: true, accounts: getAccounts() });
+});
+
+// Dashboard API: per-account model availability.
+//
+// Two layers, deliberately distinguished so the UI never presents a guess as a
+// fact: `probe` is the result of actually asking each account to run each model,
+// `learned` is what live traffic has discovered since the last restart.
+app.get('/api/models/availability', dashboardAuthMiddleware, (req, res) => {
+  const accounts = getAccounts();
+  res.json({
+    accounts: accounts.map(a => ({
+      id: a.id,
+      name: a.name,
+      enabled: a.enabled,
+      catalogue: a.models || []
+    })),
+    probe: getLastProbeRun(),
+    probeRunning: isProbeRunning(),
+    learned: listUnsupported()
+  });
+});
+
+// Dashboard API: actively probe availability. One tiny generation request per
+// account/model pair, so it costs a little upstream quota — hence on demand
+// only, never on a timer.
+app.post('/api/models/probe', dashboardAuthMiddleware, async (req, res) => {
+  const accounts = getAccounts().filter(a => a.enabled);
+  if (accounts.length === 0) {
+    return res.status(400).json({ success: false, error: 'No enabled accounts to probe' });
+  }
+
+  try {
+    const run = await probeAll(accounts, {
+      concurrency: parseInt(process.env.PROBE_CONCURRENCY || '4', 10)
+    });
+    res.json({ success: true, probe: run });
+  } catch (err) {
+    const status = err.code === 'PROBE_BUSY' ? 409 : 500;
+    res.status(status).json({ success: false, error: err.message });
+  }
 });
 
 // Dashboard API: get current routing strategy

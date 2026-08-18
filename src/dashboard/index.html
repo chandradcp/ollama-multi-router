@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <!-- Toast Notification Container -->
@@ -249,10 +249,31 @@
       <section id="section-models" class="glass-panel section-panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">🧠 Active Models Breakdown</h2>
-            <p class="panel-subtitle">Aggregated AI models currently available and utilized across your Ollama cluster</p>
+            <h2 class="panel-title">🧠 Model Availability</h2>
+            <p class="panel-subtitle">Which models each account may actually run. Ollama lists the whole catalogue to every account regardless of plan, so this is measured, not advertised.</p>
+          </div>
+          <div class="panel-actions">
+            <span id="probe-meta" class="panel-subtitle font-mono"></span>
+            <button id="probe-btn" class="btn-secondary" title="Sends one 1-token request per account/model pair">🧪 Probe Availability</button>
           </div>
         </div>
+
+        <div class="matrix-legend">
+          <span><span class="matrix-dot matrix-ok"></span> Available</span>
+          <span><span class="matrix-dot matrix-plan"></span> Not on this plan</span>
+          <span><span class="matrix-dot matrix-none"></span> Not served</span>
+          <span><span class="matrix-dot matrix-fail"></span> Probe failed</span>
+          <span><span class="matrix-dot matrix-unknown"></span> Untested</span>
+        </div>
+
+        <div class="table-container">
+          <table id="model-matrix" class="activity-table model-matrix">
+            <thead><tr><th>Model</th></tr></thead>
+            <tbody><tr><td class="empty-text">Loading availability…</td></tr></tbody>
+          </table>
+        </div>
+
+        <h3 class="panel-title matrix-subhead">Usage</h3>
         <div id="models-list" class="models-grid">
           <p class="empty-text">Loading model telemetry...</p>
         </div>
@@ -497,6 +518,6 @@ export OPENAI_API_KEY="<span id="guide-key-hermes" class="text-indigo">default-i
     </div>
   </div>
 
-  <script src="dashboard.js?v=3"></script>
+  <script src="dashboard.js?v=4"></script>
 </body>
 </html>

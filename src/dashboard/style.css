@@ -1321,3 +1321,88 @@ button {
   text-align: center;
   width: 100%;
 }
+
+/* --- Model availability matrix ------------------------------------------- */
+.matrix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  margin: 0.25rem 0 1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.matrix-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.matrix-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.matrix-ok      { background: var(--accent-emerald); }
+.matrix-plan    { background: var(--accent-amber); }
+.matrix-none    { background: var(--text-muted); }
+.matrix-fail    { background: var(--accent-rose); }
+.matrix-unknown { background: rgba(255, 255, 255, 0.16); }
+
+.model-matrix th,
+.model-matrix td {
+  white-space: nowrap;
+}
+
+.model-matrix th:not(:first-child),
+.model-matrix td:not(:first-child) {
+  text-align: center;
+}
+
+.model-matrix td:first-child {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--text-main);
+}
+
+/* Account columns are narrow; keep the header readable without stretching. */
+.model-matrix th:not(:first-child) {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.matrix-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.matrix-cell.matrix-ok      { background: rgba(16, 185, 129, 0.16); color: var(--accent-emerald); }
+.matrix-cell.matrix-plan    { background: rgba(245, 158, 11, 0.14); color: var(--accent-amber); }
+.matrix-cell.matrix-none    { background: rgba(148, 163, 184, 0.14); color: var(--text-muted); }
+.matrix-cell.matrix-fail    { background: rgba(244, 63, 94, 0.16); color: var(--accent-rose); }
+.matrix-cell.matrix-unknown { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); }
+
+.matrix-row-none td:first-child {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(148, 163, 184, 0.5);
+}
+
+.matrix-subhead {
+  margin-top: 1.75rem;
+  font-size: 0.95rem;
+}
+
+.probe-running {
+  opacity: 0.6;
+  pointer-events: none;
+}

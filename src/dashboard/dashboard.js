@@ -880,6 +880,135 @@ function renderModelUsage(modelStats, accounts) {
   updateGuideSnippets();
 }
 
+// --- Model availability matrix --------------------------------------------
+// Ollama advertises every model to every account regardless of plan, so the
+// catalogue alone cannot say what an account may run. Two sources fill this in:
+// an on-demand probe (authoritative, one tiny request per pair) and whatever
+// live traffic has already learned. Anything neither has touched is shown as
+// untested rather than guessed at.
+
+const VERDICT_STYLE = {
+  available:   { cls: 'matrix-ok',      glyph: '✓', label: 'Available' },
+  plan:        { cls: 'matrix-plan',    glyph: '$', label: 'Not included in this plan' },
+  unavailable: { cls: 'matrix-none',    glyph: '·', label: 'Not served by this account' },
+  failed:      { cls: 'matrix-fail',    glyph: '!', label: 'Probe failed (transient)' },
+  unknown:     { cls: 'matrix-unknown', glyph: '?', label: 'Not tested yet' }
+};
+
+async function fetchModelAvailability() {
+  try {
+    const response = await fetch(`${API_BASE}/api/models/availability`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch model availability');
+    return await response.json();
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+}
+
+function renderModelMatrix(data) {
+  const table = document.getElementById('model-matrix');
+  const meta = document.getElementById('probe-meta');
+  if (!table || !data) return;
+
+  const accounts = data.accounts || [];
+  const probe = data.probe;
+  const probeResults = (probe && probe.results) || {};
+  const probeDetails = (probe && probe.details) || {};
+
+  // Anything live traffic rejected, keyed the same way as a probe verdict.
+  const learned = new Set((data.learned || []).map(e => `${e.accountId}|${e.model}`));
+
+  const models = new Set();
+  accounts.forEach(a => (a.catalogue || []).forEach(m => models.add(m)));
+  Object.keys(probeResults).forEach(m => models.add(m));
+
+  if (meta) {
+    if (data.probeRunning) {
+      meta.textContent = 'probing…';
+    } else if (probe) {
+      const when = new Date(probe.finishedAt);
+      const pairs = Object.keys(probeResults).length * (probe.accountIds || []).length;
+      meta.textContent = `last probe: ${when.toLocaleString()} · ${pairs} pairs`;
+    } else {
+      meta.textContent = 'never probed';
+    }
+  }
+
+  if (models.size === 0 || accounts.length === 0) {
+    table.querySelector('thead').innerHTML = '<tr><th>Model</th></tr>';
+    table.querySelector('tbody').innerHTML =
+      '<tr><td class="empty-text">No accounts or models to show yet.</td></tr>';
+    return;
+  }
+
+  table.querySelector('thead').innerHTML =
+    '<tr><th>Model</th>' +
+    accounts.map(a => `<th title="${escapeHtml(a.id)}">${escapeHtml(a.name)}${a.enabled ? '' : ' (off)'}</th>`).join('') +
+    '<th>Available on</th></tr>';
+
+  const sorted = Array.from(models).sort();
+
+  table.querySelector('tbody').innerHTML = sorted.map(model => {
+    let availableCount = 0;
+
+    const cells = accounts.map(acc => {
+      let verdict = (probeResults[model] && probeResults[model][acc.id]) || null;
+      if (!verdict && learned.has(`${acc.id}|${model}`)) verdict = 'plan';
+      if (!verdict) verdict = 'unknown';
+
+      if (verdict === 'available') availableCount++;
+
+      const style = VERDICT_STYLE[verdict] || VERDICT_STYLE.unknown;
+      const detail = probeDetails[`${acc.id}|${model}`];
+      const tip = detail ? `${style.label} — ${detail}` : style.label;
+
+      return `<td><span class="matrix-cell ${style.cls}" title="${escapeHtml(tip)}">${style.glyph}</span></td>`;
+    }).join('');
+
+    const rowCls = availableCount === 0 && probe ? ' class="matrix-row-none"' : '';
+    const summary = availableCount > 0
+      ? `<span class="badge badge-green font-mono">${availableCount}/${accounts.length}</span>`
+      : `<span class="badge badge-gray font-mono">none</span>`;
+
+    return `<tr${rowCls}><td>${escapeHtml(model)}</td>${cells}<td>${summary}</td></tr>`;
+  }).join('');
+}
+
+async function runModelProbe() {
+  const btn = document.getElementById('probe-btn');
+  const meta = document.getElementById('probe-meta');
+  if (btn) {
+    btn.classList.add('probe-running');
+    btn.textContent = '🧪 Probing…';
+  }
+  if (meta) meta.textContent = 'probing every account/model pair…';
+
+  try {
+    const response = await fetch(`${API_BASE}/api/models/probe`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok || !body.success) {
+      showToast(body.error || 'Model probe failed', 'error');
+    } else {
+      showToast('Model availability probed', 'success');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Model probe failed', 'error');
+  } finally {
+    if (btn) {
+      btn.classList.remove('probe-running');
+      btn.textContent = '🧪 Probe Availability';
+    }
+    const data = await fetchModelAvailability();
+    renderModelMatrix(data);
+  }
+}
+
 // --- Activity Feed Filter & Search Engine ---
 function setupActivityFilters() {
   const searchInput = document.getElementById('activity-search');
@@ -981,11 +1110,14 @@ function setupAutoRefresh() {
 }
 
 async function refreshDashboard(silent = false) {
-  const [accounts, statsData, cacheData] = await Promise.all([
+  const [accounts, statsData, cacheData, availability] = await Promise.all([
     fetchAccounts(),
     fetchStatsData(),
-    fetchCacheData()
+    fetchCacheData(),
+    fetchModelAvailability()
   ]);
+
+  if (availability) renderModelMatrix(availability);
 
   if (accounts) {
     localStorage.setItem('cachedAccounts', JSON.stringify(accounts));
@@ -1112,6 +1244,8 @@ async function init() {
     btn.disabled = false;
     btn.textContent = '🔄 Refresh Status';
   });
+
+  safeBind('probe-btn', 'click', runModelProbe);
 
   safeBind('health-check-btn', 'click', async () => {
     const btn = document.getElementById('health-check-btn');
