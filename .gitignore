@@ -8,6 +8,8 @@ server.log
 
 # Contains real Ollama API keys — keep it local only
 config/accounts.json
+config/*.bak*
+config/*.backup*
 
 # Contains the generated local API key — keep it local only
 config/gateway.json
