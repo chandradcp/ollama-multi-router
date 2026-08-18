@@ -12,6 +12,12 @@ const {
   clearAccountRateLimit,
   isAccountRateLimited
 } = require('./providers');
+const {
+  accountSupportsModel,
+  isCapabilityError,
+  markUnsupported,
+  clearUnsupported
+} = require('./capabilities');
 
 let roundRobinIndex = 0;
 
@@ -60,7 +66,7 @@ function getAllEnabledAccounts() {
   return getEnabledAccounts();
 }
 
-async function executeWithFallback(requestFn, maxRetries = null, strategy = null) {
+async function executeWithFallback(requestFn, maxRetries = null, strategy = null, model = null) {
   const retries = maxRetries || parseInt(process.env.MAX_RETRIES || '4', 10);
   const strat = strategy || getGlobalRoutingStrategy();
   const enabled = getAllEnabledAccounts();
@@ -76,7 +82,14 @@ async function executeWithFallback(requestFn, maxRetries = null, strategy = null
   // than failing outright if every account is limited).
   const ready = ordered.filter(a => !isAccountRateLimited(a.id));
   const cooling = ordered.filter(a => isAccountRateLimited(a.id));
-  const tryOrder = [...ready, ...cooling];
+  const byCooldown = [...ready, ...cooling];
+
+  // Then deprioritize accounts that cannot serve this model — either their
+  // allowlist excludes it, or they answered 403 for it recently. They stay in
+  // the list as a last resort so a stale verdict can never strand a request.
+  const capable = byCooldown.filter(a => accountSupportsModel(a, model));
+  const incapable = byCooldown.filter(a => !accountSupportsModel(a, model));
+  const tryOrder = [...capable, ...incapable];
 
   const limit = Math.min(retries, tryOrder.length);
   const attempts = [];
@@ -101,10 +114,26 @@ async function executeWithFallback(requestFn, maxRetries = null, strategy = null
 
       updateAccountStatus(account.id, { healthy: true, lastError: null });
       clearAccountRateLimit(account.id);
+      // The account just served this model, so any earlier 403 verdict is stale.
+      clearUnsupported(account.id, model);
       return { result, account };
     } catch (err) {
       incrementErrorCount(account.id, err.message);
-      updateAccountStatus(account.id, { healthy: false, lastError: err.message });
+
+      // A 403 means this account's plan does not cover the model. Remember it
+      // so later requests for the same model skip this account instead of
+      // rediscovering the rejection every time. It is NOT an account fault:
+      // the credentials work and every other model still routes there, so the
+      // account keeps its healthy flag rather than showing red on the
+      // dashboard for a limit that only applies to one model.
+      if (isCapabilityError(err)) {
+        markUnsupported(account.id, model);
+        updateAccountStatus(account.id, {
+          lastError: `model not available on this plan: ${model || 'unknown'}`
+        });
+      } else {
+        updateAccountStatus(account.id, { healthy: false, lastError: err.message });
+      }
 
       // Surface Ollama rate-limiting (HTTP 429) per account so the dashboard
       // can show a cooldown badge.

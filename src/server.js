@@ -366,7 +366,9 @@ app.post('/v1/chat/completions', authMiddleware, async (req, res) => {
 
     const { result: streamData, account } = await executeWithFallback(
       acc => sendChatRequest(acc, req.body, stream),
-      parseInt(process.env.MAX_RETRIES || '4', 10)
+      parseInt(process.env.MAX_RETRIES || '4', 10),
+      null,
+      openAIModelName
     );
 
     logRequest('POST', '/v1/chat/completions', account.id, stream ? 200 : 200, Date.now() - start, { model: req.body.model });
@@ -541,7 +543,9 @@ app.post('/v1/completions', authMiddleware, async (req, res) => {
 
     const { result, account } = await executeWithFallback(
       acc => chatCompletion(acc, ollamaBody, false),
-      parseInt(process.env.MAX_RETRIES || '4', 10)
+      parseInt(process.env.MAX_RETRIES || '4', 10),
+      null,
+      openAIModelName
     );
 
     const openAIResp = ollamaResponseToOpenAI(result, openAIModelName);
