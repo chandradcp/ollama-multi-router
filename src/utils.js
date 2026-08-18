@@ -71,12 +71,39 @@ function generateId() {
   return Math.random().toString(36).substring(2, 15);
 }
 
+// Hosts that legitimately serve plain HTTP: a local Ollama daemon, a box on
+// the LAN, a container on the same host. Everything else is a remote provider
+// where http:// both leaks the API key in cleartext and breaks POSTs — the
+// 301 to https downgrades the method to GET and the API answers 405.
+function isLocalHost(hostname) {
+  const h = hostname.toLowerCase();
+  if (h === 'localhost' || h === '::1' || h.endsWith('.local') || h.endsWith('.localhost')) return true;
+  if (h === '127.0.0.1' || h.startsWith('127.')) return true;
+  if (h.startsWith('10.') || h.startsWith('192.168.')) return true;
+  const m = h.match(/^172\.(\d+)\./);
+  if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+  return false;
+}
+
+// Upgrade http:// to https:// for remote hosts, leaving local addresses alone.
+function upgradeInsecureUrl(url) {
+  if (!url || !/^http:\/\//i.test(url)) return url;
+  let hostname;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return url;
+  }
+  if (isLocalHost(hostname)) return url;
+  return url.replace(/^http:\/\//i, 'https://');
+}
+
 // Normalize an Ollama base URL so we can safely append native `/api/*` paths.
 // Strips trailing slashes and a trailing `/v1` (OpenAI-compat suffix users
 // often paste), because this router talks to Ollama's native API.
 function normalizeBaseUrl(url) {
   if (!url) return url;
-  return url.trim().replace(/\/+$/, '').replace(/\/v1$/i, '');
+  return upgradeInsecureUrl(url.trim().replace(/\/+$/, '').replace(/\/v1$/i, ''));
 }
 
 // Normalize a base URL for a genuine OpenAI-compatible provider (Kimi Code,
@@ -86,7 +113,7 @@ function normalizeBaseUrl(url) {
 // slashes, never strip a `/v1` suffix.
 function stripTrailingSlash(url) {
   if (!url) return url;
-  return url.trim().replace(/\/+$/, '');
+  return upgradeInsecureUrl(url.trim().replace(/\/+$/, ''));
 }
 
 module.exports = {
@@ -95,5 +122,6 @@ module.exports = {
   sleep,
   generateId,
   normalizeBaseUrl,
-  stripTrailingSlash
+  stripTrailingSlash,
+  upgradeInsecureUrl
 };

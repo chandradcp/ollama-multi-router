@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { normalizeBaseUrl, stripTrailingSlash, generateId, sleep } = require('../src/utils');
+const { normalizeBaseUrl, stripTrailingSlash, generateId, sleep, upgradeInsecureUrl } = require('../src/utils');
 
 test('normalizeBaseUrl strips a trailing /v1 (OpenAI-compat suffix)', () => {
   assert.strictEqual(normalizeBaseUrl('https://api.ollama.com/v1'), 'https://api.ollama.com');
@@ -57,4 +57,33 @@ test('sleep resolves after the given delay', async () => {
   const start = Date.now();
   await sleep(20);
   assert.ok(Date.now() - start >= 18);
+});
+
+test('normalizeBaseUrl upgrades http to https for remote hosts', () => {
+  assert.strictEqual(normalizeBaseUrl('http://ollama.com'), 'https://ollama.com');
+  assert.strictEqual(normalizeBaseUrl('http://ollama.com/v1/'), 'https://ollama.com');
+});
+
+test('normalizeBaseUrl leaves local addresses on http', () => {
+  assert.strictEqual(normalizeBaseUrl('http://localhost:11434'), 'http://localhost:11434');
+  assert.strictEqual(normalizeBaseUrl('http://127.0.0.1:11434'), 'http://127.0.0.1:11434');
+  assert.strictEqual(normalizeBaseUrl('http://192.168.1.9:11434'), 'http://192.168.1.9:11434');
+  assert.strictEqual(normalizeBaseUrl('http://10.0.0.4:11434'), 'http://10.0.0.4:11434');
+  assert.strictEqual(normalizeBaseUrl('http://172.16.0.5:11434'), 'http://172.16.0.5:11434');
+  assert.strictEqual(normalizeBaseUrl('http://ollama.local'), 'http://ollama.local');
+});
+
+test('normalizeBaseUrl does not treat 172.32 as private', () => {
+  assert.strictEqual(normalizeBaseUrl('http://172.32.0.5:11434'), 'https://172.32.0.5:11434');
+});
+
+test('stripTrailingSlash upgrades remote http but keeps the /v1 path', () => {
+  assert.strictEqual(stripTrailingSlash('http://api.kimi.com/coding/v1'), 'https://api.kimi.com/coding/v1');
+  assert.strictEqual(stripTrailingSlash('http://localhost:8080/v1'), 'http://localhost:8080/v1');
+});
+
+test('upgradeInsecureUrl passes through https and malformed input', () => {
+  assert.strictEqual(upgradeInsecureUrl('https://ollama.com'), 'https://ollama.com');
+  assert.strictEqual(upgradeInsecureUrl('not a url'), 'not a url');
+  assert.strictEqual(upgradeInsecureUrl(''), '');
 });
