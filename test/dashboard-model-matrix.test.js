@@ -270,3 +270,92 @@ test('model names are escaped', () => {
   assert.ok(!body.includes('<img src=x'));
   assert.match(body, /&lt;img/);
 });
+
+test('account model badges show the latest access status', () => {
+  const account = {
+    id: 'a1',
+    name: 'free account',
+    enabled: true,
+    url: 'https://ollama.com',
+    models: ['free-model', 'pro-model', 'limited-model', 'unknown-model']
+  };
+  const availability = {
+    probe: {
+      results: {
+        'free-model': { a1: 'available' },
+        'pro-model': { a1: 'plan' },
+        'limited-model': { a1: 'failed' }
+      }
+    },
+    learned: []
+  };
+
+  ctx.sandbox.renderAccounts([account], availability);
+  const html = ctx.getElementById('accounts-list').innerHTML;
+
+  assert.match(html, /free-model/);
+  assert.match(html, /data-model-access="free"[^>]*>.*model-access-label">Free</);
+  assert.match(html, /data-model-access="pro"[^>]*>.*model-access-label">Pro</);
+  assert.match(html, /data-model-access="limit"[^>]*>.*model-access-label">Limit</);
+  assert.match(html, /data-model-access="unknown"[^>]*>.*model-access-label">Untested</);
+});
+
+test('active model usage hides catalogue models with no requests', () => {
+  const accounts = [
+    { id: 'a1', models: ['catalogue-only-model', 'used-model'] }
+  ];
+  const modelStats = {
+    'used-model': { totalRequests: 2, totalTokens: 120 },
+    'idle-model': { totalRequests: 0, totalTokens: 0 }
+  };
+
+  ctx.sandbox.renderModelUsage(modelStats, accounts);
+  const html = ctx.getElementById('models-list').innerHTML;
+
+  assert.match(html, /used-model/);
+  assert.doesNotMatch(html, /catalogue-only-model/);
+  assert.doesNotMatch(html, /idle-model/);
+});
+
+test('health checks also refresh model availability', async () => {
+  const calls = [];
+  ctx.sandbox.fetch = async (url, options = {}) => {
+    calls.push({ url, method: options.method || 'GET' });
+    return { ok: true, json: async () => ({}) };
+  };
+
+  await ctx.sandbox.runHealthCheck();
+
+  assert.deepStrictEqual(calls.map(call => `${call.method} ${call.url}`), [
+    'POST http://localhost:20128/api/health-check',
+    'POST http://localhost:20128/api/models/probe'
+  ]);
+});
+
+test('the dashboard keeps active model usage but removes the separate availability matrix', () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'dashboard', 'index.html'),
+    'utf8'
+  );
+
+  assert.match(html, /id="models-list"/);
+  assert.doesNotMatch(html, /Model Availability/);
+  assert.doesNotMatch(html, /id="probe-btn"/);
+  assert.doesNotMatch(html, /id="model-matrix"/);
+});
+
+test('telemetry and latency panels share a responsive layout', () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'dashboard', 'index.html'),
+    'utf8'
+  );
+  const layoutStart = html.indexOf('<div class="telemetry-layout">');
+  const accountsSection = html.indexOf('<!-- Section: Account Controls & Routing -->', layoutStart);
+  const layout = html.slice(layoutStart, accountsSection);
+
+  assert.ok(layoutStart >= 0, 'telemetry layout wrapper should exist');
+  assert.match(layout, /<section id="section-analytics"/);
+  assert.match(layout, /<section id="section-distribution"/);
+  assert.match(layout, /<section id="section-chart"/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'src', 'dashboard', 'style.css'), 'utf8'), /\.telemetry-layout/);
+});

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <!-- Toast Notification Container -->
@@ -161,63 +161,70 @@
         </div>
       </section>
 
-      <!-- Section: V4 Complex Analytics -->
-      <section id="section-analytics" class="glass-panel section-panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">🔬 Advanced Telemetry & Distribution</h2>
-            <p class="panel-subtitle">Deep dive into model utilization, hourly traffic density, and node workload balance</p>
-          </div>
-        </div>
-        <div class="analytics-grid">
-          <!-- Hourly Traffic Heatmap -->
-          <div class="analytics-card glass-card">
-            <h3 class="analytics-title">🕒 24H Traffic Heatmap</h3>
-            <div id="hourly-heatmap" class="heatmap-container">
-              <div class="text-center text-muted font-mono py-4">Waiting for traffic data...</div>
-            </div>
-            <div class="heatmap-legend font-mono text-sm">
-              <span>Low</span>
-              <div class="color-scale"></div>
-              <span>High</span>
+      <div class="telemetry-layout">
+        <!-- Section: Advanced Telemetry -->
+        <section id="section-analytics" class="glass-panel section-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">🔬 Advanced Telemetry</h2>
+              <p class="panel-subtitle">Hourly traffic density and node workload balance</p>
             </div>
           </div>
-          <!-- Model Usage Distribution -->
-          <div class="analytics-card glass-card">
-            <h3 class="analytics-title">🧠 Model Usage Distribution</h3>
-            <div id="model-distribution" class="distribution-container">
-              <div class="text-center text-muted font-mono py-4">Waiting for model data...</div>
+          <div class="analytics-grid">
+            <!-- Hourly Traffic Heatmap -->
+            <div class="analytics-card glass-card">
+              <h3 class="analytics-title">🕒 24H Traffic Heatmap</h3>
+              <div id="hourly-heatmap" class="heatmap-container">
+                <div class="text-center text-muted font-mono py-4">Waiting for traffic data...</div>
+              </div>
+              <div class="heatmap-legend font-mono text-sm">
+                <span>Low</span>
+                <div class="color-scale"></div>
+                <span>High</span>
+              </div>
+            </div>
+            <!-- Account Workload Balance -->
+            <div class="analytics-card glass-card analytics-full-width">
+              <h3 class="analytics-title">⚖️ Node Workload Balance</h3>
+              <div id="workload-balance" class="workload-bar-container">
+                <div class="text-center text-muted font-mono py-4">Waiting for node data...</div>
+              </div>
+              <div id="workload-legend" class="workload-legend font-mono text-sm"></div>
             </div>
           </div>
-          <!-- Account Workload Balance -->
-          <div class="analytics-card glass-card analytics-full-width">
-            <h3 class="analytics-title">⚖️ Node Workload Balance</h3>
-            <div id="workload-balance" class="workload-bar-container">
-              <div class="text-center text-muted font-mono py-4">Waiting for node data...</div>
-            </div>
-            <div id="workload-legend" class="workload-legend font-mono text-sm"></div>
-          </div>
-        </div>
-      </section>
+        </section>
 
+        <!-- Section: Model Usage Distribution -->
+        <section id="section-distribution" class="glass-panel section-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">🧠 Model Usage Distribution</h2>
+              <p class="panel-subtitle">Share of token traffic across recently used models</p>
+            </div>
+          </div>
+          <div id="model-distribution" class="distribution-container">
+            <div class="text-center text-muted font-mono py-4">Waiting for model data...</div>
+          </div>
+        </section>
 
-      <!-- Section: Visual Latency Trend Graph -->
-      <section id="section-chart" class="glass-panel section-panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">📈 Real-Time Latency & Traffic Trend</h2>
-            <p class="panel-subtitle">Visual performance history of the last 30 routed AI requests across all nodes</p>
+        <!-- Section: Visual Latency Trend Graph -->
+        <section id="section-chart" class="glass-panel section-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">📈 Real-Time Latency & Traffic Trend</h2>
+              <p class="panel-subtitle">Visual performance history of the last 30 routed AI requests across all nodes</p>
+            </div>
+            <div class="chart-legend font-mono text-sm" style="display: flex; gap: 1rem; align-items: center;">
+              <span><span class="status-dot healthy" style="margin-right: 4px; display: inline-block;"></span>200 OK</span>
+              <span><span class="status-dot unhealthy" style="margin-right: 4px; display: inline-block;"></span>500 Error</span>
+              <span><span class="text-cyan font-semibold">⚡ Cache Hit</span></span>
+            </div>
           </div>
-          <div class="chart-legend font-mono text-sm" style="display: flex; gap: 1rem; align-items: center;">
-            <span><span class="status-dot healthy" style="margin-right: 4px; display: inline-block;"></span>200 OK</span>
-            <span><span class="status-dot unhealthy" style="margin-right: 4px; display: inline-block;"></span>500 Error</span>
-            <span><span class="text-cyan font-semibold">⚡ Cache Hit</span></span>
+          <div id="latency-chart-container" class="chart-container">
+            <div class="text-center py-8 text-muted">Waiting for traffic data to generate visual chart...</div>
           </div>
-        </div>
-        <div id="latency-chart-container" class="chart-container">
-          <div class="text-center py-8 text-muted">Waiting for traffic data to generate visual chart...</div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <!-- Section: Account Controls & Routing -->
       <section id="section-accounts" class="glass-panel section-panel">
@@ -249,31 +256,10 @@
       <section id="section-models" class="glass-panel section-panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">🧠 Model Availability</h2>
-            <p class="panel-subtitle">Which models each account may actually run. Ollama lists the whole catalogue to every account regardless of plan, so this is measured, not advertised.</p>
-          </div>
-          <div class="panel-actions">
-            <span id="probe-meta" class="panel-subtitle font-mono"></span>
-            <button id="probe-btn" class="btn-secondary" title="Sends one 1-token request per account/model pair">🧪 Probe Availability</button>
+            <h2 class="panel-title">🧠 Active Models</h2>
+            <p class="panel-subtitle">Model traffic and usage across connected accounts. Run Health Check or Ping Node to refresh model access labels.</p>
           </div>
         </div>
-
-        <div class="matrix-legend">
-          <span><span class="matrix-dot matrix-ok"></span> Available</span>
-          <span><span class="matrix-dot matrix-plan"></span> Not on this plan</span>
-          <span><span class="matrix-dot matrix-none"></span> Not served</span>
-          <span><span class="matrix-dot matrix-fail"></span> Probe failed</span>
-          <span><span class="matrix-dot matrix-unknown"></span> Untested</span>
-        </div>
-
-        <div class="table-container">
-          <table id="model-matrix" class="activity-table model-matrix">
-            <thead><tr><th>Model</th></tr></thead>
-            <tbody><tr><td class="empty-text">Loading availability…</td></tr></tbody>
-          </table>
-        </div>
-
-        <h3 class="panel-title matrix-subhead">Usage</h3>
         <div id="models-list" class="models-grid">
           <p class="empty-text">Loading model telemetry...</p>
         </div>
@@ -518,6 +504,6 @@ export OPENAI_API_KEY="<span id="guide-key-hermes" class="text-indigo">default-i
     </div>
   </div>
 
-  <script src="dashboard.js?v=4"></script>
+  <script src="dashboard.js?v=6"></script>
 </body>
 </html>

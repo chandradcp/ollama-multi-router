@@ -329,7 +329,15 @@ async function runHealthCheck() {
       headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to run health check');
-    return await response.json();
+    const health = await response.json();
+
+    const probeResponse = await fetch(`${API_BASE}/api/models/probe`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    if (!probeResponse.ok) throw new Error('Failed to refresh model availability');
+
+    return { health, probe: await probeResponse.json() };
   } catch (err) {
     console.error(err);
     return null;
@@ -707,7 +715,30 @@ function renderStats(accounts, statsData, cacheData) {
   animateValue('avg-tps', avgTpsVal, 500, v => `${v} t/s`);
 }
 
-function renderAccounts(accounts) {
+function accountModelAccess(model, accountId, availability) {
+  const probeResults = availability && availability.probe && availability.probe.results || {};
+  let verdict = probeResults[model] && probeResults[model][accountId];
+
+  if (!verdict && availability && Array.isArray(availability.learned)) {
+    const learned = availability.learned.some(entry => entry.accountId === accountId && entry.model === model);
+    if (learned) verdict = 'plan';
+  }
+
+  switch (verdict) {
+    case 'available':
+      return { key: 'free', label: 'Free', className: 'badge-green', title: 'Available on this account' };
+    case 'plan':
+      return { key: 'pro', label: 'Pro', className: 'badge-red', title: 'Not included in this account plan' };
+    case 'failed':
+      return { key: 'limit', label: 'Limit', className: 'badge-yellow', title: 'Probe failed temporarily; quota or upstream limit may apply' };
+    case 'unavailable':
+      return { key: 'unavailable', label: 'Unavailable', className: 'badge-gray', title: 'Not served by this account' };
+    default:
+      return { key: 'unknown', label: 'Untested', className: 'badge-gray', title: 'Not tested yet' };
+  }
+}
+
+function renderAccounts(accounts, availability) {
   const container = document.getElementById('accounts-list');
 
   if (!accounts || accounts.length === 0) {
@@ -731,7 +762,10 @@ function renderAccounts(accounts) {
 
     const safeId = escapeHtml(acc.id);
     const modelsText = acc.models && acc.models.length > 0
-      ? acc.models.map(m => `<span class="badge badge-indigo font-mono">${escapeHtml(m)}</span>`).join(' ')
+      ? acc.models.map(m => {
+        const access = accountModelAccess(m, acc.id, availability);
+        return `<span class="badge ${access.className} font-mono model-access-badge" data-model-access="${access.key}" title="${escapeHtml(access.title)}"><span class="model-access-label">${access.label}</span> ${escapeHtml(m)}</span>`;
+      }).join(' ')
       : '<span class="text-muted">Not loaded</span>';
 
     return `
@@ -837,20 +871,26 @@ function renderModelUsage(modelStats, accounts) {
   const container = document.getElementById('models-list');
   const select = document.getElementById('playground-model');
   
-  const allModels = new Set();
+  const knownModels = new Set();
   if (accounts) {
     accounts.forEach(acc => {
-      if (acc.models) acc.models.forEach(m => allModels.add(m));
+      if (acc.models) acc.models.forEach(m => knownModels.add(m));
     });
   }
   if (modelStats) {
-    Object.keys(modelStats).forEach(m => allModels.add(m));
+    Object.keys(modelStats).forEach(m => knownModels.add(m));
   }
 
-  if (select && allModels.size > 0) {
+  const activeModels = modelStats
+    ? Object.entries(modelStats)
+      .filter(([, stats]) => Number(stats?.totalRequests) > 0)
+      .map(([modelName]) => modelName)
+    : [];
+
+  if (select && knownModels.size > 0) {
     const currentVal = select.value;
     select.innerHTML = '<option value="">-- Select Active Model --</option>' + 
-      Array.from(allModels).map(m => `<option value="${escapeHtml(m)}" ${m === currentVal ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
+      Array.from(knownModels).map(m => `<option value="${escapeHtml(m)}" ${m === currentVal ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
     if (!currentVal && select.options.length > 1) {
       select.selectedIndex = 1;
     }
@@ -858,13 +898,13 @@ function renderModelUsage(modelStats, accounts) {
 
   if (!container) return;
 
-  if (allModels.size === 0) {
+  if (activeModels.length === 0) {
     container.innerHTML = '<p class="empty-text">No active models detected on connected accounts yet.</p>';
     return;
   }
 
-  container.innerHTML = Array.from(allModels).map(modelName => {
-    const stats = modelStats && modelStats[modelName] || { totalRequests: 0, totalTokens: 0 };
+  container.innerHTML = activeModels.map(modelName => {
+    const stats = modelStats[modelName];
     return `
       <div class="model-pill">
         <span class="model-name">${escapeHtml(modelName)}</span>
@@ -1122,7 +1162,7 @@ async function refreshDashboard(silent = false) {
   if (accounts) {
     localStorage.setItem('cachedAccounts', JSON.stringify(accounts));
     renderStats(accounts, statsData, cacheData);
-    renderAccounts(accounts);
+    renderAccounts(accounts, availability);
   }
   
   if (statsData) {
@@ -1244,8 +1284,6 @@ async function init() {
     btn.disabled = false;
     btn.textContent = '🔄 Refresh Status';
   });
-
-  safeBind('probe-btn', 'click', runModelProbe);
 
   safeBind('health-check-btn', 'click', async () => {
     const btn = document.getElementById('health-check-btn');
